@@ -1,0 +1,1166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Carding OCR Review — MILL_A</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap');
+:root {
+  --bg:#0f1117; --surface:#1a1d2e; --surface2:#252840; --border:#2e3150;
+  --accent:#4f7fff; --green:#22c55e; --amber:#f59e0b; --red:#ef4444;
+  --text:#e2e8f0; --muted:#64748b; --orange:#fb923c;
+  --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:var(--sans); min-height:100vh; }
+
+/* TOP BAR */
+header {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:12px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  position:sticky; top:0; z-index:100;
+}
+.logo { width:34px; height:34px; background:var(--accent); border-radius:8px;
+        display:flex; align-items:center; justify-content:center; font-size:17px; }
+h1 { font-size:16px; font-weight:700; }
+h1 span { color:var(--accent); }
+.spacer { flex:1; }
+.badge {
+  font-family:var(--mono); font-size:10px; background:var(--surface2);
+  border:1px solid var(--border); border-radius:4px; padding:2px 8px; color:var(--muted);
+}
+.badge.shift-a { border-color:var(--green);  color:var(--green);  }
+.badge.shift-b { border-color:var(--amber);  color:var(--amber);  }
+.badge.shift-c { border-color:var(--red);    color:var(--red);    }
+.badge.ok      { border-color:var(--accent); color:var(--accent); }
+.badge.edited  { border-color:var(--amber);  color:var(--amber);  }
+
+.btn {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:7px 16px; border-radius:7px; font-family:var(--sans);
+  font-size:12px; font-weight:600; cursor:pointer; border:none; transition:all .15s;
+}
+.btn:hover { opacity:.85; }
+.btn:disabled { opacity:.4; cursor:not-allowed; }
+.btn-ok    { background:var(--green);  color:#000; }
+.btn-no    { background:transparent;   color:var(--red); border:1px solid var(--red); }
+.btn-no:hover { background:rgba(239,68,68,.1); }
+.btn-ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+
+/* ACCURACY */
+.acc-bar {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:7px 20px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.acc-label { font-size:11px; font-weight:600; color:var(--muted); }
+.acc-track { width:180px; height:6px; background:var(--surface2); border-radius:3px; overflow:hidden; }
+.acc-fill  { height:100%; border-radius:3px; transition:width .5s; }
+.conf-high { background:var(--green); }
+.conf-med  { background:var(--amber); }
+.conf-low  { background:var(--red);   }
+
+/* REVALIDATION STATUS PILL */
+.reval {
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:var(--mono); font-size:10px; color:var(--muted);
+  border:1px solid var(--border); background:var(--surface2);
+  border-radius:5px; padding:3px 9px;
+}
+.reval .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex-shrink:0; }
+.reval.busy { border-color:rgba(245,158,11,.5); color:var(--amber); }
+.reval.busy .dot { background:var(--amber); animation:pulse .7s infinite alternate; }
+.reval.ok   { border-color:rgba(34,197,94,.4); color:var(--green); }
+.reval.ok   .dot { background:var(--green); }
+.reval.err  { border-color:rgba(239,68,68,.45); color:var(--red); }
+.reval.err  .dot { background:var(--red); }
+@keyframes pulse { to { opacity:.2; } }
+
+/* MACHINE STATUS BANNER */
+.mach-banner {
+  padding:8px 20px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  border-bottom:1px solid var(--border); font-size:12px;
+}
+.mach-banner.clean  { background:rgba(34,197,94,.07);  }
+.mach-banner.warn   { background:rgba(245,158,11,.09); }
+.mach-banner.danger { background:rgba(239,68,68,.09);  }
+.mach-pill {
+  display:inline-flex; align-items:center; gap:4px;
+  font-family:var(--mono); font-size:10px; font-weight:700;
+  padding:2px 8px; border-radius:4px;
+}
+.pill-inactive { background:rgba(245,158,11,.2); color:#f59e0b; border:1px solid rgba(245,158,11,.4); }
+.pill-notfound { background:rgba(239,68,68,.2);  color:#ef4444; border:1px solid rgba(239,68,68,.4); }
+.pill-ok       { background:rgba(34,197,94,.15); color:#22c55e; border:1px solid rgba(34,197,94,.3); }
+.mach-banner-label { font-weight:600; color:var(--muted); font-size:11px; }
+.mach-codes { display:flex; gap:5px; flex-wrap:wrap; }
+
+/* HEADER INFO — now editable */
+.hdr-bar {
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:10px 20px; display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start;
+}
+.hf { display:flex; flex-direction:column; gap:3px; }
+.hf-l { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;
+        display:flex; align-items:center; gap:5px; }
+.hf-l .edit-tag { color:var(--amber); font-size:9px; font-weight:700; letter-spacing:0; }
+.hf-v { font-size:13px; font-weight:600; font-family:var(--mono); }
+.hf-row { display:flex; align-items:center; gap:4px; position:relative; }
+
+.hf-input {
+  background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+  color:var(--text); font-family:var(--mono); font-size:13px; font-weight:600;
+  padding:5px 8px; outline:none; min-width:132px; transition:border-color .15s, background .15s;
+}
+.hf-input::placeholder { color:var(--muted); font-weight:400; }
+.hf-input:focus   { border-color:var(--accent); background:rgba(79,127,255,.12); }
+.hf-input.edited  { border-color:var(--amber); background:rgba(245,158,11,.10); }
+.hf-input.warn    { border-color:var(--amber); }
+.hf-input.invalid { border-color:var(--red); background:rgba(239,68,68,.12); color:#fca5a5; }
+select.hf-input { cursor:pointer; min-width:96px; }
+select.hf-input option { background:var(--surface2); color:var(--text); }
+
+.mini-btn {
+  background:var(--surface2); border:1px solid var(--border); border-radius:6px;
+  color:var(--muted); font-size:12px; padding:5px 8px; cursor:pointer; line-height:1;
+}
+.mini-btn:hover { border-color:var(--accent); color:var(--text); }
+
+.hf-msg { font-size:9px; font-family:var(--mono); min-height:12px; line-height:1.2; max-width:190px; }
+.hf-msg.err  { color:var(--red); }
+.hf-msg.warn { color:var(--amber); }
+.hf-msg.ok   { color:var(--green); }
+
+/* MAIN */
+main { max-width:100%; padding:16px 20px; }
+
+.card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:16px; }
+.section-title { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase;
+                 letter-spacing:.8px; margin-bottom:14px; display:flex; align-items:center; gap:6px; }
+.section-title::before { content:''; display:inline-block; width:3px; height:13px;
+                          background:var(--accent); border-radius:2px; }
+
+/* MATERIAL TABLE */
+.tbl-outer { overflow-x:auto; border:1px solid var(--border); border-radius:8px; }
+.mat-table { width:100%; border-collapse:collapse; font-size:11px; min-width:960px; }
+
+.mat-table th {
+  padding:6px 8px; text-align:center; border:1px solid var(--border);
+  font-size:10px; letter-spacing:.5px; white-space:nowrap;
+}
+th.mat-lbl { text-align:left; min-width:120px; background:var(--surface2);
+             color:var(--muted); font-size:10px; text-transform:uppercase; }
+th.rt-lbl  { min-width:54px; background:var(--surface2); color:var(--muted);
+             font-size:10px; text-transform:uppercase; }
+th.bc-hdr  { background:#833C11; color:#fff; }
+th.ic-hdr  { background:#375623; color:#fff; }
+th.fc-hdr  { background:#1F3864; color:#fff; }
+th.tc-hdr  { background:#5C3317; color:#fff; }
+th.hw-hdr  { background:#5C3317; color:#fff; }
+th.bc-sub  { background:rgba(131,60,17,.2);  color:#aaa; font-family:var(--mono); font-size:9px; }
+th.ic-sub  { background:rgba(55,86,35,.2);   color:#aaa; font-family:var(--mono); font-size:9px; }
+th.fc-sub  { background:rgba(31,56,100,.2);  color:#aaa; font-family:var(--mono); font-size:9px; }
+th.tc-sub  { background:rgba(92,51,23,.2);   color:#aaa; font-family:var(--mono); font-size:9px; }
+th.hw-sub  { background:rgba(92,51,23,.2);   color:#aaa; font-family:var(--mono); font-size:9px; }
+
+.mat-table td { padding:3px 2px; border:1px solid var(--border); text-align:center; vertical-align:middle; }
+td.mat-lbl-td { text-align:left; padding:5px 10px; font-weight:600; color:var(--text);
+                font-size:11px; white-space:nowrap; vertical-align:middle; }
+td.rt-td { padding:2px 5px; font-size:9px; color:var(--muted); white-space:nowrap;
+           background:var(--surface2); font-weight:500; }
+td.rt-sap { background:rgba(34,197,94,.08); color:var(--green); font-size:9px;
+            font-weight:600; padding:2px 5px; }
+
+/* Written cell input */
+td.w-cell input {
+  width:100%; background:transparent; border:none; color:#fff;
+  font-family:var(--mono); font-size:11px; padding:3px 2px;
+  text-align:center; outline:none; font-weight:600;
+}
+td.w-cell input:focus { background:rgba(79,127,255,.15); border-radius:3px; }
+td.w-cell input::placeholder { color:var(--muted); font-weight:400; }
+td.w-cell input.changed { background:rgba(245,158,11,.12); }
+td.w-cell.has-val { background:rgba(131,60,17,.15); }
+td.w-cell.ic-val  { background:rgba(55,86,35,.15); }
+td.w-cell.fc-val  { background:rgba(31,56,100,.15); }
+td.w-cell.tc-val  { background:rgba(92,51,23,.15); }
+td.w-cell.hw-val  { background:rgba(92,51,23,.15); }
+
+/* Machine status overrides on w-cell */
+td.w-cell.mach-inactive { background:rgba(245,158,11,.22) !important; }
+td.w-cell.mach-notfound { background:rgba(239,68,68,.22)  !important; }
+td.w-cell.mach-inactive input { color:#f59e0b !important; }
+td.w-cell.mach-notfound input { color:#ef4444 !important; }
+
+/* Status label inside written cell */
+td.w-cell { position:relative; }
+.w-status {
+  display:block; font-size:7px; font-weight:700; font-family:var(--mono);
+  letter-spacing:.3px; text-align:center; line-height:1; padding-bottom:2px;
+}
+.w-status.st-inactive { color:#f59e0b; }
+.w-status.st-notfound { color:#ef4444; }
+.w-status.st-active   { color:#22c55e; }
+
+/* SAP cell */
+td.sap-cell { background:rgba(34,197,94,.05); padding:2px 3px; vertical-align:middle; }
+td.sap-cell.sap-inactive { background:rgba(245,158,11,.1); }
+td.sap-cell.sap-notfound { background:rgba(239,68,68,.1);  }
+.sap-code { display:block; color:#22c55e; font-family:var(--mono); font-size:9px;
+            font-weight:700; line-height:1.4; }
+.sap-code.code-inactive { color:#f59e0b; }
+.sap-code.code-notfound { color:#ef4444; }
+.sap-hrs  { display:block; color:#f59e0b; font-family:var(--mono); font-size:8px; }
+.sap-status { display:block; font-size:8px; font-weight:700; line-height:1.3; }
+.sap-status.st-inactive { color:#f59e0b; }
+.sap-status.st-notfound { color:#ef4444; }
+
+/* FOOTER */
+.footer {
+  position:sticky; bottom:0; background:var(--surface);
+  border-top:1px solid var(--border); padding:8px 20px;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+}
+.fstat { font-size:11px; color:var(--muted); }
+.fstat span { color:var(--text); font-weight:600; }
+
+/* LOADING */
+#loading {
+  position:fixed; inset:0; background:var(--bg);
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:16px; z-index:999;
+}
+.spin { width:38px; height:38px; border:3px solid var(--border);
+        border-top-color:var(--accent); border-radius:50%;
+        animation:spin .7s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+#loading p { color:var(--muted); font-size:13px; }
+
+/* TOAST */
+#toast {
+  position:fixed; bottom:70px; left:50%; transform:translateX(-50%);
+  background:var(--surface2); border:1px solid var(--border);
+  border-radius:8px; padding:9px 18px; font-size:13px;
+  z-index:500; display:none; white-space:nowrap;
+}
+#toast.ok  { border-color:var(--green); color:var(--green); }
+#toast.err { border-color:var(--red);   color:var(--red);   }
+
+/* MODAL */
+.modal-bg { display:none; position:fixed; inset:0; background:rgba(0,0,0,.65);
+            z-index:200; align-items:center; justify-content:center; }
+.modal-bg.on { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border);
+         border-radius:12px; padding:22px; max-width:400px; width:90%; }
+.modal h3 { font-size:15px; margin-bottom:9px; }
+.modal p  { font-size:13px; color:var(--muted); margin-bottom:16px; line-height:1.6;
+            white-space:pre-line; }
+.modal-btns { display:flex; gap:8px; justify-content:flex-end; }
+
+/* Legend */
+.legend { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:12px; }
+.leg-item { display:flex; align-items:center; gap:5px; font-size:10px; color:var(--muted); }
+.leg-dot { width:10px; height:10px; border-radius:2px; }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spin"></div><p>Loading carding data...</p></div>
+<div id="toast"></div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3 id="mTitle"></h3>
+    <p  id="mMsg"></p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-ok"    id="mOk" onclick="doModal()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOP BAR -->
+<header id="topbar" style="display:none">
+  <div class="logo">🧵</div>
+  <div>
+    <h1>Carding <span>OCR</span> Review</h1>
+    <p style="font-size:11px;color:var(--muted)">Review, edit and confirm before sending to SAP</p>
+  </div>
+  <span class="badge" id="bDate">—</span>
+  <span class="badge" id="bShift">Shift —</span>
+  <span class="badge ok" id="bSup" style="display:none"></span>
+  <span class="badge" id="bMill" style="display:none"></span>
+  <div class="spacer"></div>
+  <button class="btn btn-no"    onclick="doReject()">✕ Reject</button>
+  <button class="btn btn-ok"    id="confirmBtn" onclick="askConfirm()">✓ Confirm &amp; Send to SAP</button>
+</header>
+
+<!-- ACCURACY -->
+<div class="acc-bar" id="accBar" style="display:none">
+  <span class="acc-label">OCR Confidence</span>
+  <div class="acc-track"><div class="acc-fill" id="aFill" style="width:0%"></div></div>
+  <span style="font-size:13px;font-weight:700;font-family:var(--mono)" id="aPct">—</span>
+  <span style="font-size:11px;color:var(--muted)" id="aDetail"></span>
+  <div class="spacer"></div>
+  <span class="reval" id="revalPill"><span class="dot"></span><span id="revalTxt">not validated</span></span>
+</div>
+
+<!-- MACHINE STATUS BANNER -->
+<div class="mach-banner" id="machBanner" style="display:none"></div>
+
+<!-- HEADER INFO (editable) -->
+<div class="hdr-bar" id="hdrBar" style="display:none"></div>
+
+<!-- MAIN -->
+<main id="mainContent" style="display:none">
+  <div class="card">
+    <div class="section-title">Material Flow — Machine Numbers per Stage</div>
+
+    <div class="legend">
+      <span class="leg-item"><span class="leg-dot" style="background:#833C11"></span>Breaker Card</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#375623"></span>Inter Card</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#1F3864"></span>Finisher Card</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#5C3317"></span>Teaser</span>
+      <span class="leg-item"><span class="leg-dot" style="background:#5C3317;opacity:.7"></span>HW</span>
+      <span class="leg-item"><span class="leg-dot" style="background:rgba(245,158,11,.5);border:1px solid #f59e0b"></span>Inactive machine</span>
+      <span class="leg-item"><span class="leg-dot" style="background:rgba(239,68,68,.5);border:1px solid #ef4444"></span>Not found in SAP</span>
+    </div>
+
+    <div class="tbl-outer">
+      <table class="mat-table" id="matTable">
+        <thead id="matHead"></thead>
+        <tbody id="matBody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<!-- FOOTER -->
+<div class="footer" id="footer" style="display:none">
+  <span class="fstat">Date: <span id="fDate">—</span></span>
+  <span class="fstat">Shift: <span id="fShift">—</span></span>
+  <span class="fstat">Supervisor: <span id="fSup">—</span></span>
+  <span class="fstat">Mill: <span id="fMill">MILL_A</span></span>
+  <div class="spacer"></div>
+  <span style="font-size:11px;color:var(--muted)">Header and cells are editable · SAP codes revalidate automatically</span>
+</div>
+
+<script>
+const SID = new URLSearchParams(location.search).get('s') || '';
+
+// ── Data constants ─────────────────────────────────────────────────────────
+const MATERIALS = ['hessian','sacking_warp','sacking_weft','sale_yarn','12lb_warp','15lb_weft'];
+const MAT_LABEL = {
+  hessian:'Hessian', sacking_warp:'Sacking Warp', sacking_weft:'Sacking Weft',
+  sale_yarn:'Sale Yarn', '12lb_warp':'12 Lb Warp', '15lb_weft':'15 Lb Weft',
+};
+
+// ── Sections now match index.html exactly: BC(8), IC(5), FC(10), TC(2), HW(1)
+const SECS = [
+  { k:'BC', label:'Breaker Card',  hdr:'bc-hdr', sub:'bc-sub', bg:'rgba(131,60,17,.15)', cnt:8  },
+  { k:'IC', label:'Inter Card',    hdr:'ic-hdr', sub:'ic-sub', bg:'rgba(55,86,35,.15)',  cnt:5  },
+  { k:'FC', label:'Finisher Card', hdr:'fc-hdr', sub:'fc-sub', bg:'rgba(31,56,100,.15)', cnt:10 },
+  { k:'TC', label:'Teaser',        hdr:'tc-hdr', sub:'tc-sub', bg:'rgba(92,51,23,.15)',  cnt:2  },
+  { k:'HW', label:'HW',            hdr:'hw-hdr', sub:'hw-sub', bg:'rgba(92,51,23,.15)',  cnt:1  },
+];
+
+// Shed comes from a letter on each written number:
+//   MILL_B only: o/O = old shed -> 031, n/N = new shed -> 032. MILL_A -> 030, MILL_C -> 035;
+//   an o/n letter on MILL_A / MILL_C is flagged "REMOVE o/n" and blocks confirm.
+// On MILL_B a number written with no o/n letter is flagged "shed not specified".
+const SAP_SUFFIX  = { BC:'BC', IC:'IC', FC:'FF', TC:'TC', HW:'HC' };
+const SHIFT_HRS   = { '1':8, '3/4':6, '1/2':4, '1/4':2 };
+function parseToken(p, secKey) {
+  const m = p.match(/^\s*([onON]?)\s*(\d+)\s*(?:\((\d+\/\d+)\))?\s*$/);
+  if (!m) return null;
+  const letter = m[1].toLowerCase();
+  const num = parseInt(m[2]);
+  const hrs = m[3] ? (SHIFT_HRS[m[3]] || 8) : 8;
+  const suf = SAP_SUFFIX[secKey];
+  const plantU = String((D && D.plant) || 'MILL_A').toUpperCase();
+  // o/n shed letters are valid ONLY for MILL_B; on MILL_A / MILL_C they must be removed.
+  if (letter && plantU !== 'MILL_B') return { needShed:true, badLetter:true, num, hrs, raw:p.trim() };
+  if (plantU === 'MILL_C') return { code:`035${suf}${String(num).padStart(3,'0')}`, hrs };
+  let d;
+  if (letter === 'o') d = '1';
+  else if (letter === 'n') d = '2';
+  else {
+    const plant = String((D && D.plant) || 'MILL_A').toUpperCase();
+    if (plant === 'MILL_B') return { needShed:true, num, hrs, raw:p.trim() };
+    d = '0';
+  }
+  return { code:`03${d}${suf}${String(num).padStart(3,'0')}`, hrs };
+}
+
+// Header field config
+const SHIFTS  = ['A','B','C'];
+const PLANTS  = ['MILL_A', 'MILL_D', 'MILL_C', 'MILL_B'];       // add more plant codes here if needed
+const HDR_KEYS = ['date','shift','supervisor','plant'];
+
+let D    = null;   // live OCR payload (mutated as user edits)
+let MV   = null;   // machine validation result from SQL
+let _cb  = null;
+
+let ORIG      = {};   // snapshot of header values at load
+let VERIFIED  = {};   // header fields a human has touched
+let HDR_STATE = {};   // per-field validation result
+
+// ── SAP helpers ──────────────────────────────────────────────────────────────
+function parseMulti(raw, secKey) {
+  if (!raw) return [];
+  return raw.split(',').map(p => p.trim()).filter(Boolean)
+            .map(p => parseToken(p, secKey)).filter(Boolean);
+}
+
+function machineStatus(code) {
+  if (!MV || !MV.sql_available) return null;
+  const info = MV.machines[code];
+  if (info === undefined || info === null) return 'notfound';
+  return info.active ? 'active' : 'inactive';
+}
+
+function sapCellHtml(raw, secKey) {
+  const entries = parseMulti(raw, secKey);
+  if (!entries.length) return '<span style="color:var(--muted);font-size:9px;">–</span>';
+  return entries.map(e => {
+    if (e.needShed) return `<span class="sap-code code-notfound">${e.raw}</span><span class="sap-status st-notfound">${e.badLetter ? '⚠ REMOVE o/n' : '⚠ SHED? (o/n)'}</span>`;
+    const st = machineStatus(e.code);
+    const codeClass = st === 'inactive' ? 'sap-code code-inactive'
+                    : st === 'notfound' ? 'sap-code code-notfound'
+                    : 'sap-code';
+    const statusTag = st === 'inactive'
+      ? '<span class="sap-status st-inactive">⚠ INACTIVE</span>'
+      : st === 'notfound'
+      ? '<span class="sap-status st-notfound">❓ NOT FOUND</span>'
+      : '';
+    return `<span class="${codeClass}">${e.code}</span><span class="sap-hrs">${e.hrs}hrs</span>${statusTag}`;
+  }).join('');
+}
+
+function cellWorstStatus(raw, secKey) {
+  const entries = parseMulti(raw, secKey);
+  let worst = null;
+  for (const e of entries) {
+    if (e.needShed) return 'notfound';
+    const st = machineStatus(e.code);
+    if (st === 'notfound') return 'notfound';
+    if (st === 'inactive') worst = 'inactive';
+  }
+  return worst;
+}
+
+function wStatusLabel(raw, secKey) {
+  if (!raw) return '';
+  const entries = parseMulti(raw, secKey);
+  if (!entries.length) return '';
+  return entries.map(e => {
+    if (e.needShed) return `<span class="w-status st-notfound">${e.badLetter ? '⚠ REMOVE o/n' : '⚠ SHED?'}</span>`;
+    if (!MV || !MV.sql_available) return '';
+    const st = machineStatus(e.code);
+    if (st === 'inactive') return `<span class="w-status st-inactive">⚠ INACTIVE</span>`;
+    if (st === 'notfound') return `<span class="w-status st-notfound">❓ NOT FOUND</span>`;
+    return `<span class="w-status st-active">✓ ACTIVE</span>`;
+  }).join('');
+}
+
+function refreshSapCell(mk, sk, m) {
+  const inp   = document.getElementById(`w_${mk}_${sk}_${m}`);
+  const sapEl = document.getElementById(`s_${mk}_${sk}_${m}`);
+  const wsEl  = document.getElementById(`ws_${mk}_${sk}_${m}`);
+  const wCell = inp ? inp.closest('td') : null;
+  if (!inp || !sapEl) return;
+
+  sapEl.innerHTML = sapCellHtml(inp.value, sk);
+  if (wsEl) wsEl.innerHTML = wStatusLabel(inp.value, sk);
+
+  const st = cellWorstStatus(inp.value, sk);
+  sapEl.classList.remove('sap-inactive','sap-notfound');
+  if (st === 'inactive') sapEl.classList.add('sap-inactive');
+  if (st === 'notfound') sapEl.classList.add('sap-notfound');
+
+  if (wCell) {
+    wCell.classList.remove('mach-inactive','mach-notfound');
+    if (st === 'inactive') wCell.classList.add('mach-inactive');
+    if (st === 'notfound') wCell.classList.add('mach-notfound');
+  }
+}
+
+// Repaint every SAP cell after a fresh validation result
+function repaintAllStatuses() {
+  MATERIALS.forEach(mk => SECS.forEach(s => {
+    for (let i = 1; i <= s.cnt; i++) refreshSapCell(mk, s.k, `M${i}`);
+  }));
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  if (!SID) { showErr('No session ID — use the link sent by the bot.'); return; }
+  loadSession();
+});
+
+async function loadSession() {
+  try {
+    const r = await fetch(`/api/carding_preview/data?s=${SID}`);
+    if (!r.ok) throw new Error('Session not found or expired');
+    const p = await r.json();
+    D = p.ocr_data || p;
+    MV = null;
+
+    ORIG = {
+      date:       D.date       || '',
+      shift:      (D.shift     || '').toUpperCase(),
+      supervisor: D.supervisor || '',
+      plant:      D.plant      || 'MILL_A',
+    };
+    D.plant = D.plant || 'MILL_A';
+
+    render();
+    await runRevalidate();   // first validation pass
+  } catch(e) { showErr(e.message); }
+}
+
+// ── Render all ────────────────────────────────────────────────────────────────
+function render() {
+  document.getElementById('loading').style.display = 'none';
+
+  document.getElementById('topbar').style.display = 'flex';
+  document.getElementById('accBar').style.display = 'flex';
+
+  renderHeaderBar();
+  buildTable();
+
+  document.getElementById('mainContent').style.display = 'block';
+  document.getElementById('footer').style.display      = 'flex';
+
+  syncMirrors();
+  updateAccuracyUI();
+  HDR_KEYS.forEach(k => validateAndPaint(k));
+  updateConfirmState();
+}
+
+// ── Editable header bar ───────────────────────────────────────────────────────
+function renderHeaderBar() {
+  const hb = document.getElementById('hdrBar');
+  hb.style.display = 'flex';
+
+  const shiftVal = (D.shift || '').toUpperCase();
+  const shiftOpts = SHIFTS.slice();
+  if (shiftVal && !shiftOpts.includes(shiftVal)) shiftOpts.unshift(shiftVal);
+  if (!shiftVal) shiftOpts.unshift('');
+
+  const plantVal = (D.plant || 'MILL_A').toUpperCase();
+
+  hb.innerHTML = `
+    <div class="hf">
+      <span class="hf-l">Date <em class="edit-tag" id="tag_date"></em></span>
+      <div class="hf-row">
+        <input class="hf-input" id="f_date" value="${esc(D.date || '')}"
+               placeholder="DD/MM/YYYY" autocomplete="off"
+               oninput="onHeaderInput('date', this)">
+        <button class="mini-btn" title="Pick a date" onclick="openDatePicker()">📅</button>
+        <input type="date" id="f_date_native"
+               style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"
+               onchange="onNativeDate(this)">
+      </div>
+      <span class="hf-msg" id="msg_date"></span>
+    </div>
+
+    <div class="hf">
+      <span class="hf-l">Shift <em class="edit-tag" id="tag_shift"></em></span>
+      <select class="hf-input" id="f_shift" onchange="onHeaderInput('shift', this)">
+        ${shiftOpts.map(o => `<option value="${esc(o)}" ${o === shiftVal ? 'selected' : ''}>${o ? esc(o) : '—'}</option>`).join('')}
+      </select>
+      <span class="hf-msg" id="msg_shift"></span>
+    </div>
+
+    <div class="hf">
+      <span class="hf-l">Supervisor <em class="edit-tag" id="tag_supervisor"></em></span>
+      <input class="hf-input" id="f_supervisor" value="${esc(D.supervisor || '')}"
+             placeholder="Supervisor name" autocomplete="off" style="min-width:170px"
+             oninput="onHeaderInput('supervisor', this)">
+      <span class="hf-msg" id="msg_supervisor"></span>
+    </div>
+
+    <div class="hf">
+      <span class="hf-l">Mill / Plant <em class="edit-tag" id="tag_plant"></em></span>
+      <select class="hf-input" id="f_plant" style="min-width:104px" onchange="onHeaderInput('plant', this)">
+        ${(PLANTS.includes(plantVal) ? PLANTS : [plantVal, ...PLANTS]).map(p => `<option value="${esc(p)}" ${p === plantVal ? 'selected' : ''}>${esc(p)}</option>`).join('')}
+      </select>
+      <span class="hf-msg" id="msg_plant"></span>
+    </div>
+
+    <div class="hf">
+      <span class="hf-l">Confidence</span>
+      <span class="hf-v" id="hf_conf" style="padding:6px 0">—</span>
+    </div>
+
+    <div class="hf">
+      <span class="hf-l">&nbsp;</span>
+      <button class="mini-btn" id="undoHdr" style="display:none;padding:6px 10px"
+              onclick="undoHeaderEdits()">↺ Undo header edits</button>
+    </div>
+  `;
+}
+
+function openDatePicker() {
+  const nat = document.getElementById('f_date_native');
+  const p   = parseAnyDate(D.date || '');
+  if (p.ok) nat.value = `${p.y}-${pad2(p.m)}-${pad2(p.d)}`;
+  if (nat.showPicker) { try { nat.showPicker(); return; } catch(e) {} }
+  nat.style.pointerEvents = 'auto';
+  nat.style.opacity = '1';
+  nat.style.width = '150px';
+  nat.style.height = 'auto';
+  nat.focus();
+}
+
+function onNativeDate(nat) {
+  if (!nat.value) return;
+  const [y, m, d] = nat.value.split('-');
+  const out = formatLike(ORIG.date, +y, +m, +d);
+  const inp = document.getElementById('f_date');
+  inp.value = out;
+  nat.style.pointerEvents = 'none'; nat.style.opacity = '0';
+  nat.style.width = '1px'; nat.style.height = '1px';
+  onHeaderInput('date', inp);
+}
+
+// ── Header edit handler ───────────────────────────────────────────────────────
+function onHeaderInput(field, el) {
+  let v = el.value;
+  if (field === 'plant') { v = v.toUpperCase(); el.value = v; }
+  if (field === 'shift') v = v.toUpperCase();
+
+  D[field] = v.trim();
+
+  if (field === 'plant') {
+    repaintAllStatuses();     // 030 (MILL_A) / per-number 031/032 (MILL_B) / 035 (MILL_C)
+  }
+
+  const changed = D[field] !== ORIG[field];
+  if (changed) VERIFIED[field] = true; else delete VERIFIED[field];
+  el.classList.toggle('edited', changed);
+  const tag = document.getElementById('tag_' + field);
+  if (tag) tag.textContent = changed ? '✎ edited' : '';
+
+  // record human-verified fields for the backend
+  D.human_verified = Object.keys(VERIFIED);
+
+  validateAndPaint(field);
+  syncMirrors();
+  updateAccuracyUI();
+  updateConfirmState();
+
+  const undo = document.getElementById('undoHdr');
+  if (undo) undo.style.display = Object.keys(VERIFIED).length ? '' : 'none';
+
+  scheduleRevalidate(500);   // header change → live re-validate against SQL/SAP
+}
+
+function undoHeaderEdits() {
+  HDR_KEYS.forEach(k => {
+    D[k] = ORIG[k];
+    const el = document.getElementById('f_' + k);
+    if (el) { el.value = ORIG[k]; el.classList.remove('edited'); }
+    const tag = document.getElementById('tag_' + k);
+    if (tag) tag.textContent = '';
+  });
+  VERIFIED = {};
+  D.human_verified = [];
+  document.getElementById('undoHdr').style.display = 'none';
+  HDR_KEYS.forEach(k => validateAndPaint(k));
+  syncMirrors();
+  updateAccuracyUI();
+  updateConfirmState();
+  scheduleRevalidate(300);
+  toast('Header restored to OCR values.', 'ok');
+}
+
+// ── Header field validation ───────────────────────────────────────────────────
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function parseAnyDate(s) {
+  s = String(s || '').trim();
+  if (!s) return { ok:false, msg:'Date is required.' };
+  let y, m, d;
+  let mt = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/);         // YYYY-MM-DD
+  if (mt) { y = +mt[1]; m = +mt[2]; d = +mt[3]; }
+  else {
+    mt = s.match(/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{2}|\d{4})$/);      // DD/MM/YYYY
+    if (!mt) return { ok:false, msg:'Use DD/MM/YYYY.' };
+    d = +mt[1]; m = +mt[2]; y = +mt[3];
+    if (y < 100) y += 2000;
+  }
+  if (m < 1 || m > 12) return { ok:false, msg:'Month must be 01–12.' };
+  const dt = new Date(y, m - 1, d);
+  if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d)
+    return { ok:false, msg:'Not a real calendar date.' };
+  return { ok:true, y, m, d, dt };
+}
+
+// Write a date back using the same separator/order the OCR gave us
+function formatLike(sample, y, m, d) {
+  const s = String(sample || '');
+  if (/^\d{4}[-\/.]/.test(s)) {
+    const sep = s.match(/^\d{4}([-\/.])/)[1];
+    return `${y}${sep}${pad2(m)}${sep}${pad2(d)}`;
+  }
+  const sep = (s.match(/^\d{1,2}([-\/.])/) || [,'/'])[1];
+  return `${pad2(d)}${sep}${pad2(m)}${sep}${y}`;
+}
+
+function validateHeaderField(field, val) {
+  const v = String(val || '').trim();
+
+  if (field === 'date') {
+    const p = parseAnyDate(v);
+    if (!p.ok) return { level:'err', msg:p.msg };
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff = Math.round((p.dt - today) / 86400000);
+    if (diff > 0)    return { level:'warn', msg:`Future date (+${diff}d) — check the khata.` };
+    if (diff < -60)  return { level:'warn', msg:`${Math.abs(diff)} days old — back-dated entry.` };
+    return { level:'ok', msg:'' };
+  }
+
+  if (field === 'shift') {
+    if (!v) return { level:'err', msg:'Shift is required.' };
+    if (!SHIFTS.includes(v)) return { level:'warn', msg:'Shift outside A / B / C.' };
+    return { level:'ok', msg:'' };
+  }
+
+  if (field === 'supervisor') {
+    if (!v) return { level:'err', msg:'Supervisor name is required.' };
+    if (v.length < 3) return { level:'err', msg:'Name is too short.' };
+    if (!/^[A-Za-z][A-Za-z .'\-]*$/.test(v))
+      return { level:'warn', msg:'Letters, spaces, dots and hyphens only.' };
+    return { level:'ok', msg:'' };
+  }
+
+  if (field === 'plant') {
+    if (!v) return { level:'err', msg:'Plant code is required.' };
+    if (!/^[A-Z0-9]{3,6}$/.test(v)) return { level:'err', msg:'Plant code: 3–6 letters/digits.' };
+    if (!PLANTS.includes(v)) return { level:'warn', msg:'Plant code not in the known list.' };
+    return { level:'ok', msg:'' };
+  }
+
+  return { level:'ok', msg:'' };
+}
+
+function validateAndPaint(field) {
+  const el  = document.getElementById('f_' + field);
+  const msg = document.getElementById('msg_' + field);
+  if (!el) return;
+  const res = validateHeaderField(field, el.value);
+  HDR_STATE[field] = res;
+
+  el.classList.remove('invalid','warn');
+  if (res.level === 'err')  el.classList.add('invalid');
+  if (res.level === 'warn') el.classList.add('warn');
+
+  if (msg) {
+    msg.className   = 'hf-msg ' + (res.level === 'err' ? 'err' : res.level === 'warn' ? 'warn' : 'ok');
+    msg.textContent = res.level === 'err'  ? '✕ ' + res.msg
+                    : res.level === 'warn' ? '⚠ ' + res.msg
+                    : (VERIFIED[field] ? '✓ verified' : '');
+  }
+}
+
+function headerErrors() {
+  return HDR_KEYS.filter(k => HDR_STATE[k]?.level === 'err');
+}
+function headerWarnings() {
+  return HDR_KEYS.filter(k => HDR_STATE[k]?.level === 'warn');
+}
+
+// ── Mirror header values into top bar + footer ────────────────────────────────
+function syncMirrors() {
+  const date = D.date || '—';
+  const shft = D.shift || '—';
+  const sup  = D.supervisor || '';
+  const mill = D.plant || 'MILL_A';
+
+  const bd = document.getElementById('bDate');
+  bd.textContent = date;
+  bd.className   = 'badge' + (VERIFIED.date ? ' edited' : '');
+
+  const sb = document.getElementById('bShift');
+  sb.textContent = 'Shift ' + shft;
+  sb.className   = 'badge shift-' + String(shft).toLowerCase() + (VERIFIED.shift ? ' edited' : '');
+
+  const su = document.getElementById('bSup');
+  su.textContent   = sup ? '👤 ' + sup : '';
+  su.style.display = sup ? '' : 'none';
+  su.className     = 'badge ' + (VERIFIED.supervisor ? 'edited' : 'ok');
+
+  const bm = document.getElementById('bMill');
+  bm.textContent   = '🏭 ' + mill;
+  bm.style.display = '';
+  bm.className     = 'badge' + (VERIFIED.plant ? ' edited' : '');
+
+  document.getElementById('fDate').textContent  = date;
+  document.getElementById('fShift').textContent = shft;
+  document.getElementById('fSup').textContent   = sup || '—';
+  document.getElementById('fMill').textContent  = mill;
+}
+
+// ── Confidence display (raw OCR score kept; edited fields shown as verified) ──
+function confTxt(key) {
+  if (VERIFIED[key]) return '100%✎';
+  const v = D.confidence?.[key];
+  return (v ?? '?') + '%';
+}
+
+function updateAccuracyUI() {
+  const ov  = D.confidence?.overall ?? 0;
+  const col = ov >= 80 ? '#22c55e' : ov >= 60 ? '#f59e0b' : '#ef4444';
+  const cls = ov >= 80 ? 'conf-high' : ov >= 60 ? 'conf-med' : 'conf-low';
+  const af  = document.getElementById('aFill');
+  af.style.width = ov + '%';
+  af.className   = 'acc-fill ' + cls;
+  document.getElementById('aPct').textContent = ov + '%';
+  document.getElementById('aPct').style.color = col;
+  document.getElementById('aDetail').textContent =
+    `Date:${confTxt('date')}  Shift:${confTxt('shift')}  Supervisor:${confTxt('supervisor')}  ` +
+    `Machines:${D.confidence?.machines ?? '?'}%  Materials:${D.confidence?.materials ?? '?'}%`;
+
+  const hc = document.getElementById('hf_conf');
+  if (hc) { hc.textContent = ov + '%'; hc.style.color = col; }
+}
+
+function updateConfirmState() {
+  const btn  = document.getElementById('confirmBtn');
+  if (!btn) return;
+  const errs = headerErrors();
+  btn.disabled = errs.length > 0;
+  btn.title    = errs.length ? 'Fix header fields: ' + errs.join(', ') : '';
+}
+
+// ── Live revalidation (debounced) ─────────────────────────────────────────────
+let _revalT = null, _revalSeq = 0;
+
+function setReval(state, text) {
+  const pill = document.getElementById('revalPill');
+  const txt  = document.getElementById('revalTxt');
+  if (!pill) return;
+  pill.className = 'reval ' + state;
+  txt.textContent = text;
+}
+
+function scheduleRevalidate(delay = 600) {
+  clearTimeout(_revalT);
+  setReval('busy', 'revalidating…');
+  _revalT = setTimeout(runRevalidate, delay);
+}
+
+async function runRevalidate() {
+  const seq = ++_revalSeq;
+  setReval('busy', 'revalidating…');
+  try {
+    const r = await fetch('/api/carding_preview/validate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ ocr_data: D }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const vj = await r.json();
+    if (seq !== _revalSeq) return;          // a newer edit already fired
+    if (!vj.success) throw new Error(vj.error || 'validation failed');
+
+    MV = vj;
+    repaintAllStatuses();
+    renderMachBanner();
+    const t = new Date();
+    setReval('ok', `validated ${pad2(t.getHours())}:${pad2(t.getMinutes())}:${pad2(t.getSeconds())}`);
+  } catch(e) {
+    if (seq !== _revalSeq) return;
+    console.warn('[validate]', e);
+    setReval('err', 'SQL unreachable — status may be stale');
+  }
+}
+
+// ── Machine status banner ─────────────────────────────────────────────────────
+function renderMachBanner() {
+  const el = document.getElementById('machBanner');
+  if (!MV || !MV.sql_available) {
+    el.style.display = 'none';
+    return;
+  }
+  const inactive   = MV.inactive_codes   || [];
+  const notfound   = MV.not_found_codes  || [];
+  const totalCodes = Object.keys(MV.machines || {}).length;
+  const okCount    = totalCodes - inactive.length - notfound.length;
+
+  el.style.display = 'flex';
+
+  if (inactive.length === 0 && notfound.length === 0) {
+    el.className = 'mach-banner clean';
+    el.innerHTML = `
+      <span class="mach-pill pill-ok">✅ All ${totalCodes} machines ACTIVE in SAP</span>
+      <span style="font-size:11px;color:var(--muted)">SQL Server MCH_MASTER verified</span>`;
+    return;
+  }
+
+  el.className = notfound.length > 0 ? 'mach-banner danger' : 'mach-banner warn';
+  let html = `<span class="mach-banner-label">SAP Machine Check:</span>`;
+  if (okCount > 0)
+    html += `<span class="mach-pill pill-ok">✅ ${okCount} OK</span>`;
+  if (inactive.length > 0) {
+    html += `<span class="mach-pill pill-inactive">⚠ ${inactive.length} INACTIVE</span>`;
+    html += `<span class="mach-codes">${inactive.map(c=>`<span class="mach-pill pill-inactive" style="font-size:9px">${c}</span>`).join('')}</span>`;
+  }
+  if (notfound.length > 0) {
+    html += `<span class="mach-pill pill-notfound">❓ ${notfound.length} NOT FOUND</span>`;
+    html += `<span class="mach-codes">${notfound.map(c=>`<span class="mach-pill pill-notfound" style="font-size:9px">${c}</span>`).join('')}</span>`;
+  }
+  el.innerHTML = html;
+}
+
+// ── Build table ───────────────────────────────────────────────────────────────
+function buildTable() {
+  const head = document.getElementById('matHead');
+  const body = document.getElementById('matBody');
+
+  // Header row 1 — section names
+  let h1 = `<tr>
+    <th class="mat-lbl" rowspan="3">Material</th>
+    <th class="rt-lbl"  rowspan="3"></th>`;
+  SECS.forEach(s => {
+    h1 += `<th colspan="${s.cnt}" class="${s.hdr}">${s.label}</th>`;
+  });
+  h1 += '</tr>';
+
+  // Header row 2 — M1..Mn
+  let h2 = '<tr>';
+  SECS.forEach(s => {
+    for (let i = 1; i <= s.cnt; i++) {
+      h2 += `<th class="${s.sub}">M${i}</th>`;
+    }
+  });
+  h2 += '</tr>';
+
+  head.innerHTML = h1 + h2;
+
+  // Body — 2 rows per material (Written + SAP/Hrs)
+  body.innerHTML = '';
+  MATERIALS.forEach((mk, ri) => {
+    const label   = MAT_LABEL[mk] || mk;
+    const matData = (D.materials || {})[mk] || {};
+    const rowBg   = ri % 2 === 0 ? '' : 'background:rgba(255,255,255,.015)';
+
+    // Written row
+    const tw = document.createElement('tr');
+    if (rowBg) tw.style.cssText = rowBg;
+    let wHtml = `<td class="mat-lbl-td" rowspan="2">${label}</td>
+                 <td class="rt-td">Written</td>`;
+    SECS.forEach(s => {
+      const sd  = matData[s.k] || {};
+      for (let i = 1; i <= s.cnt; i++) {
+        const m   = `M${i}`;
+        const val = sd[m] || '';
+        let cellStyle = val !== '' ? `background:${s.bg}` : '';
+        const st = cellWorstStatus(val, s.k);
+        let extraClass = '';
+        if      (st === 'inactive') extraClass = ' mach-inactive';
+        else if (st === 'notfound') extraClass = ' mach-notfound';
+
+        const wStatusHtml = wStatusLabel(val, s.k);
+        wHtml += `<td class="w-cell${extraClass}" style="${cellStyle}">
+          <input type="text"
+            id="w_${mk}_${s.k}_${m}"
+            value="${esc(val)}"
+            data-orig="${esc(val)}"
+            data-mk="${mk}" data-sk="${s.k}" data-m="${m}"
+            placeholder="–"
+            oninput="onCellInput(this)"
+          ><span class="w-status" id="ws_${mk}_${s.k}_${m}">${wStatusHtml}</span>
+        </td>`;
+      }
+    });
+    tw.innerHTML = wHtml;
+    body.appendChild(tw);
+
+    // SAP/Hrs row
+    const ts = document.createElement('tr');
+    if (rowBg) ts.style.cssText = rowBg;
+    let sHtml = `<td class="rt-sap">SAP / Hrs</td>`;
+    SECS.forEach(s => {
+      const sd = matData[s.k] || {};
+      for (let i = 1; i <= s.cnt; i++) {
+        const m   = `M${i}`;
+        const val = sd[m] || '';
+        const st  = cellWorstStatus(val, s.k);
+        const sapClass = st === 'inactive' ? ' sap-inactive' : st === 'notfound' ? ' sap-notfound' : '';
+        sHtml += `<td class="sap-cell${sapClass}" id="s_${mk}_${s.k}_${m}">${sapCellHtml(val, s.k)}</td>`;
+      }
+    });
+    ts.innerHTML = sHtml;
+    body.appendChild(ts);
+  });
+}
+
+function onCellInput(inp) {
+  inp.classList.toggle('changed', inp.value !== inp.dataset.orig);
+  const { mk, sk, m } = inp.dataset;
+  if (!D.materials)         D.materials         = {};
+  if (!D.materials[mk])     D.materials[mk]     = {};
+  if (!D.materials[mk][sk]) D.materials[mk][sk] = {};
+  D.materials[mk][sk][m] = inp.value.trim();
+
+  // Extract every SAP code from the new cell value (handles "3, 4" → 2 codes)
+  const newCodes = parseMulti(inp.value.trim(), sk).map(e => e.code).filter(Boolean);
+
+  // Full server-side revalidation keeps the banner counts honest after any edit
+  scheduleRevalidate(1200);
+
+  if (!newCodes.length) { refreshSapCell(mk, sk, m); return; }
+
+  // Find which codes are missing from MV.machines (never been looked up yet)
+  const missing = newCodes.filter(c => !MV || !(c in (MV.machines || {})));
+  if (!missing.length) { refreshSapCell(mk, sk, m); return; }
+
+  // Fast targeted SQL lookup so the cell updates instantly
+  fetch('/api/validate_machines', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ codes: missing }),
+  })
+  .then(r => r.json())
+  .then(vj => {
+    if (!vj.success) return;
+    if (!MV) MV = { sql_available: true, machines: {}, inactive_codes: [], not_found_codes: [] };
+    MV.sql_available = vj.sql_available;
+    Object.assign(MV.machines, vj.machines || {});
+    for (const c of (vj.inactive_codes || []))
+      if (!MV.inactive_codes.includes(c)) MV.inactive_codes.push(c);
+    for (const c of (vj.not_found_codes || []))
+      if (!MV.not_found_codes.includes(c)) MV.not_found_codes.push(c);
+    for (const c of missing) {
+      const info = MV.machines[c];
+      if (info && info.active) {
+        MV.inactive_codes  = MV.inactive_codes.filter(x => x !== c);
+        MV.not_found_codes = MV.not_found_codes.filter(x => x !== c);
+      }
+    }
+    refreshSapCell(mk, sk, m);
+    renderMachBanner();
+  })
+  .catch(() => refreshSapCell(mk, sk, m));
+}
+
+// ── Confirm / Reject ──────────────────────────────────────────────────────────
+function countNeedShed() {
+  let n = 0;
+  MATERIALS.forEach(mk => SECS.forEach(s => {
+    const sd = ((D.materials || {})[mk] || {})[s.k] || {};
+    for (let i = 1; i <= s.cnt; i++) {
+      parseMulti(sd[`M${i}`] || '', s.k).forEach(e => { if (e.needShed) n++; });
+    }
+  }));
+  return n;
+}
+
+function askConfirm() {
+  const errs = headerErrors();
+  if (errs.length) {
+    toast('✕ Fix these header fields first: ' + errs.join(', '), 'err');
+    const el = document.getElementById('f_' + errs[0]);
+    if (el) el.focus();
+    return;
+  }
+  const noShed = countNeedShed();
+  if (noShed) {
+    const _pl = String(D.plant || 'MILL_A').toUpperCase();
+    toast(_pl === 'MILL_B'
+      ? `✕ ${noShed} machine(s) have no shed letter — write o (old) or n (new) before the number, then resend.`
+      : `✕ ${noShed} machine(s) have an o/n letter — ${_pl} has no sheds, remove the letter from those numbers.`, 'err');
+    return;
+  }
+
+  const inactive = MV?.inactive_codes?.length || 0;
+  const notfound = MV?.not_found_codes?.length || 0;
+  const warns    = headerWarnings();
+  const edited   = Object.keys(VERIFIED);
+
+  let msg = '';
+  if (warns.length)
+    msg += `⚠️ Check before sending: ${warns.join(', ')}\n\n`;
+  if (inactive || notfound)
+    msg += `⚠️ ${inactive} inactive and ${notfound} not-found machines detected in SAP.\n\n`;
+  if (edited.length)
+    msg += `✎ Edited by you: ${edited.join(', ')}\n\n`;
+  msg += `Save ${D.date || '—'} / Shift ${D.shift || '—'} / ${D.supervisor || '—'} for ${D.plant || 'MILL_A'} and trigger SAP entry. Proceed?`;
+
+  showModal('Confirm & Send to SAP', msg, doConfirm, 'Confirm & SAP');
+}
+
+async function doConfirm() {
+  closeModal();
+  const btn = document.getElementById('confirmBtn');
+  btn.disabled = true; btn.textContent = '⏳ Saving...';
+  try {
+    const r    = await fetch('/api/carding_preview/confirm', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ session_id: SID, ocr_data: D }),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      toast('✅ Confirmed! SAP entry triggered.', 'ok');
+      btn.textContent = '✓ Confirmed';
+    } else {
+      throw new Error(data.error || 'Unknown error');
+    }
+  } catch(e) {
+    toast('❌ ' + e.message, 'err');
+    btn.disabled = false; btn.textContent = '✓ Confirm & Send to SAP';
+  }
+}
+
+function doReject() {
+  showModal('Reject OCR Data',
+    'Reject this result? No data will be saved to the database.',
+    async () => {
+      closeModal();
+      try {
+        await fetch('/api/carding_preview/reject', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ session_id: SID }),
+        });
+        toast('❌ Rejected.', 'err');
+      } catch(e) { toast('Failed to notify.', 'err'); }
+    }, 'Reject');
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function showModal(title, msg, cb, okLabel='Confirm') {
+  document.getElementById('mTitle').textContent = title;
+  document.getElementById('mMsg').textContent   = msg;
+  document.getElementById('mOk').textContent    = okLabel;
+  _cb = cb;
+  document.getElementById('modal').classList.add('on');
+}
+function closeModal() { document.getElementById('modal').classList.remove('on'); _cb = null; }
+function doModal()    { if (_cb) _cb(); }
+
+function toast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent   = msg;
+  el.className     = type;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+function showErr(msg) {
+  document.getElementById('loading').innerHTML =
+    `<div style="color:var(--red);font-size:14px;text-align:center;padding:24px">${msg}</div>`;
+}
+
+function esc(str) {
+  return String(str ?? '')
+    .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

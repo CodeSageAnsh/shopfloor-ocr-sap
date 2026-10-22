@@ -1,0 +1,7 @@
+# --- the bot ---
+python-telegram-bot>=21.0,<23.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# --- only for check_mongo.py (MongoDB verification) ---
+pymongo>=4.0
